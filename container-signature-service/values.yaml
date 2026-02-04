@@ -7,7 +7,7 @@ image:
 
 imagePullSecrets: []
 nameOverride: ""
-fullnameOverride: ""
+fullnameOverride: "avafin-container-signature-service"
 
 service:
   type: ClusterIP
@@ -61,7 +61,7 @@ config:
         virtual:
           enabled: true
       application:
-        name: container-signature-services
+        name: avafin-container-signature-services
       sleuth:
         propagation:
           type: CUSTOM

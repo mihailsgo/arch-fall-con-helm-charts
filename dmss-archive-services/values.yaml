@@ -7,7 +7,7 @@ image:
 
 imagePullSecrets: []
 nameOverride: ""
-fullnameOverride: ""
+fullnameOverride: "avafin-archive-services"
 
 service:
   type: ClusterIP
@@ -55,7 +55,7 @@ config:
         trace-id128: true
         supports-join: false
       application:
-        name: dmss-archive-services
+        name: avafin-archive-services
       servlet:
         multipart:
           maxFileSize: 1000MB

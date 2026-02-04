@@ -7,7 +7,7 @@ image:
 
 imagePullSecrets: []
 nameOverride: ""
-fullnameOverride: ""
+fullnameOverride: "avafin-archive-services-fallback"
 
 service:
   type: ClusterIP
@@ -69,7 +69,7 @@ config:
         virtual:
           enabled: true
       application:
-        name: dmss-archive-services-fallback
+        name: avafin-archive-services-fallback
       sleuth:
         propagation:
           type: CUSTOM
