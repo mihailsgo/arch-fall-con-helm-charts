@@ -18,6 +18,7 @@ Update these values before deploying to a client environment:
 - `config.applicationYaml` (database credentials, service endpoints)
 - `ingress.*` (hostnames, TLS)
 - `env.JAVA_OPTS`
+ - `fullnameOverride` (defaults to `avafin-archive-services`)
 
 The chart mounts three config files into the container:
 - `application.yml`

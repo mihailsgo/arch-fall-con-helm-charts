@@ -18,6 +18,7 @@ Update before deploying:
 - `config.applicationYaml` (service URLs, Smart-ID credentials)
 - `env.HAZELCAST_KUBERNETES_SERVICE_DNS` if you change the headless service name
 - `ingress.*`
+ - `fullnameOverride` (defaults to `avafin-container-signature-service`)
 
 ## Smart-ID Only
 The default config includes multiple signing providers from the repo. If the client only uses Smart-ID, remove or disable other provider blocks inside `config.applicationYaml` to avoid accidental enablement.

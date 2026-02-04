@@ -18,6 +18,7 @@ Update before deploying:
 - `config.applicationYaml` (archive service URL, storage mode)
 - `persistence.*` if using filesystem storage
 - `ingress.*`
+ - `fullnameOverride` (defaults to `avafin-archive-services-fallback`)
 
 ## Notes
 - Defaults are taken from repo config and include local/demo placeholders.
