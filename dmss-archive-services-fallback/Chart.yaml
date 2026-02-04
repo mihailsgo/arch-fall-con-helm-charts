@@ -1,0 +1,6 @@
+apiVersion: v2
+name: dmss-archive-services-fallback
+description: Helm chart for DMSS Archive Services Fallback
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

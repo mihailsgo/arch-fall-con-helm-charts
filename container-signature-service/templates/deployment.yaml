@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ include "chart.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+            - name: hazelcast
+              containerPort: {{ .Values.headlessService.port }}
+              protocol: TCP
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /ping/abort/15000
+                port: {{ .Values.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /ping/ready
+              port: {{ .Values.service.targetPort }}
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 100
+            periodSeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.config.enabled }}
+          volumeMounts:
+            - name: config
+              mountPath: /conf/application/application.yml
+              subPath: application.yml
+          {{- end }}
+      {{- if .Values.config.enabled }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "chart.fullname" . }}-config
+      {{- end }}

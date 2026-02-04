@@ -1,0 +1,225 @@
+replicaCount: 1
+
+image:
+  repository: eu.gcr.io/dmss-201008/dmss-archive-services
+  tag: "1"
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: dmss-archive.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: dmss-archive-tls
+      hosts:
+        - dmss-archive.example.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 50m
+    memory: 256Mi
+
+env:
+  JAVA_OPTS: "-Xmx512m -Xms512m"
+  SPRING_CONFIG_LOCATION: "/conf/application/application.yml"
+
+config:
+  applicationYaml: |
+    server:
+      port: 8090
+      forward-headers-strategy: native
+      tomcat:
+        remoteip:
+          remote-ip-header: "X-Forwarded-For"
+    spring:
+      sleuth:
+        propagation:
+          type: CUSTOM
+        trace-id128: true
+        supports-join: false
+      application:
+        name: dmss-archive-services
+      servlet:
+        multipart:
+          maxFileSize: 1000MB
+          maxRequestSize: 1000MB
+          max-file-size: 1000MB
+          max-request-size: 1000MB
+      datasource:
+        url: jdbc:postgresql://localhost:5432/dmss_archive
+        username: postgres
+        password: postgres
+      jpa:
+        hibernate:
+          ddl-auto: validate
+      liquibase:
+        change-log: classpath:liquibase-changeLog.xml
+
+    management:
+      security:
+      health:
+        probes:
+          enabled: true
+      endpoints:
+        enable: true
+        web:
+          exposure:
+            include: ["health","metrics","prometheus","loggers"]
+      tracing:
+        enabled: false
+
+    springdoc:
+      swagger-ui:
+        use-root-path: true
+
+    auth-providers:
+      - name: ot_ticket
+        type: "OT_TICKET"
+    authentication:
+      documentAccess:
+        enabled: false
+        identificationCodeHeaderName: "identificationCode"
+        documentIdHeaderName: "documentId"
+        rootRelativeUrl: /v1/auth/user
+      jwt:
+        enabled: false
+        validation: false
+        headerName: X-User-Context
+        systemCodeNameInClaim: appName
+        authorizationClaim: appName
+        private: false
+        secret: "secret"
+
+    logRequests: false
+    logRequestsDetails:
+      clientIPasRemoteAddress: true
+    fileMimeTypesAndExtensions: classpath:mime.types
+    requestMappings: "C:/IdeaProjects/trustlynx/dmss-archive-services/src/main/resources/requestmappings.json"
+
+    opentext:
+      retryCount401: 3
+      transformSpecJsonPath:
+        cateogries: file:./src/main/resources/mappings.json
+        docBody: classpath:metaForDoc.json
+
+    filesystem-service:
+      baseurl: http://localhost:8086/api
+
+    archive-connections:
+      connections:
+        -
+          name: "FS-MAIN"
+          url: http://localhost:8095/api
+          type: EXTERNAL_FILE_SYSTEM
+          priority: 1
+          failover: "FS-MAIN"
+        -
+          name: "OPENTEXT-MAIN"
+          url: http://localhost/OTCS/cs.exe/api
+          type: OPENTEXT
+          priority: 2
+          failover: "FS-MAIN"
+          usepipline: false
+          auth-providers:
+            - ot_credential
+
+    archive-general-settings:
+      database:
+        enabled: true
+        deleteEnabled: false
+      externalIdType: UID
+
+    synchronisation:
+      cron: "5 5 * * * ?"
+      maxRetry: 3
+      factory: 3
+      enabled: true
+      checkHash: DOCUMENT
+
+    logging:
+      pattern:
+        console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{X-Session-ID} %X{X-Request-ID} %X{traceId} %X{spanId}] %-5p [%t] %logger{36} - %msg%n'
+      level:
+        root: info
+        ee:
+          digitalmind: info
+
+    cors:
+      enabled: ${CORS_ENABLED:true}
+      origins: ${CORS_ORIGINS:*}
+      headers: ${CORS_HEADERS:*}
+      methods: ${CORS_METHODS:*}
+      allowCredentials: ${CORS_ALLOW_CREDENTIALS:#{false}}
+
+    service-data-collector:
+      customerid: 3eff761b-a64c-4f24-b3ef-8493f013cd08
+      instancename: DEV-KK-LOCAL
+      enabled: false
+
+    process-and-auditing-service:
+      enabled: false
+      baseUrl: "http://localhost:8765"
+      tokenHeaders: x-user-context, authorization
+      userClaims: appName, username
+
+  metaForDocJson: |
+    [
+      {
+        "operation": "shift",
+        "spec": {
+          "*": "roles.categories.&"
+        }
+      }
+    ]
+
+  metaspecJson: |
+    [
+      {
+        "operation": "shift",
+        "spec": {
+          "DocumentType": "843178_2",
+          "CustomerName": "843178_9",
+          "RegistrationNumber": "843178_11",
+          "CustomerId": "843178_5",
+          "DocumentStartDate": "843178_7",
+          "DocumentEndDate": "843178_16",
+          "DocumentNumber": "843178_18",
+          "SignatureType": "843178_23",
+          "DocumentStatus": "843178_24",
+          "RegistrationNumberCountryCode": "843178_25"
+        }
+      },
+      {
+        "operation": "modify-overwrite-beta",
+        "spec": {
+          "*": ["=toString(@(1,&))", ""]
+        }
+      }
+    ]
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

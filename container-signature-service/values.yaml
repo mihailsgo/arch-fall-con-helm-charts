@@ -1,0 +1,332 @@
+replicaCount: 2
+
+image:
+  repository: digitalmindss/dmss-container-and-signature-services
+  tag: "1.0.5"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8082
+
+headlessService:
+  enabled: true
+  port: 5777
+
+loadBalancer:
+  enabled: false
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: dmss-signature.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: dmss-signature-tls
+      hosts:
+        - dmss-signature.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 50m
+    memory: 400Mi
+
+env:
+  JAVA_OPTS: "-Xmx190m -Xms190m"
+  SPRING_PROFILES_ACTIVE: kuberneteshazelcast
+  HAZELCAST_KUBERNETES_SERVICE_DNS: "dmss-container-and-signature-services-headless.default.svc.cluster.local"
+  SPRING_CONFIG_LOCATION: "/conf/application/application.yml"
+
+config:
+  enabled: true
+  applicationYaml: |
+    spring:
+      servlet:
+        multipart:
+          max-file-size: 100MB
+          max-request-size: 100MB
+      threads:
+        virtual:
+          enabled: true
+      application:
+        name: container-signature-services
+      sleuth:
+        propagation:
+          type: CUSTOM
+        trace-id128: true
+        supports-join: false
+        async:
+          enabled: true
+      zipkin:
+        enabled: false
+      jpa:
+        hibernate:
+          ddl-auto: validate
+        show-sql: false
+        properties:
+          hibernate:
+            format_sql: true
+
+    management:
+      tracing:
+        enabled: false
+
+    hazelcast:
+      instanceName: dmss-hazelcast
+      expireInminutes: 10
+      members: localhost:5777
+      port: 5777
+      kubernetes:
+        kubernetesServiceDns: dmss-authentication-headless.default.svc.cluster.local
+        enabled: false
+        service-dns: dmss-container-headless.default.svc.cluster.local
+      evictionConfig:
+        mapName: configuration
+        size: 10000
+        evictionPolicy: 0
+
+    archive-services:
+      baseUrl: http://localhost:8090/api
+      fallbackUrl: http://localhost:8095/api
+      forwardHttpHeaders: authorization, otcsticket, X-User-Context, tlx-audit-username, tlx-audit-eventorigin, tlx-audit-note, tlx-signing-persoanlcode
+
+    digital-stamping-service:
+      baseUrl: http://localhost:8084/api
+      returnContainerResult: false
+
+    smartId:
+      hostUrl: https://sid.demo.sk.ee/smart-id-rp/v2/
+      relyingPartyUUID: 00000000-0000-0000-0000-000000000000
+      relyingPartyName: DEMO
+      interactions:
+        -
+          interactionName: "Interaction.confirmationMessageAndVerificationCodeChoice"
+          defaultText: "Please sign document confirmationMessageAndVerificationCodeChoice"
+          maxsize: 200
+          enabled: true
+        -
+          interactionName: "Interaction.confirmationMessage"
+          defaultText: "Please sign document confirmationMessage"
+          maxsize: 200
+          enabled: false
+        -
+          interactionName: "Interaction.verificationCodeChoice"
+          defaultText: "Please sign document verificationCodeChoice"
+          maxsize: 60
+          enabled: false
+        -
+          interactionName: "Interaction.verificationCodeChoice"
+          defaultText: "Please sign document verificationCodeChoice"
+          maxsize: 60
+          enabled: true
+
+    mobile-id:
+      countries:
+        EE:
+          hostUrl: https://tsp.demo.sk.ee/mid-api
+          relyingPartyUUID: 00000000-0000-0000-0000-000000000000
+          relyingPartyName: DEMO
+          displayText: "Please sign document"
+        LT:
+          hostUrl: https://mid.sk.ee/mid-api
+          relyingPartyUUID: 00000000-0000-0000-0000-000000000000
+          relyingPartyName: DEMO
+          displayText: "Please sign document"
+
+    lvrtc:
+      clientId: digitalmind
+      clientSecret: secret
+      baseUri: https://eidas-demo.eparaksts.lv/
+      authRedirectUri: https://digitalmind.northeurope.cloudapp.azure.com/extportal/signing/lvrtc/signature
+      signRedirectUri: https://digitalmind.northeurope.cloudapp.azure.com/extportal/signing/lvrtc/signature
+      defaultLocale: lv
+
+    process-and-auditing-service:
+      extendedAuditing:
+        enabled: true
+        activityCode: 100001
+        technicalDataHeader: technical_data
+        source: DMSS
+        createBy: dmss_container_and_signature_services
+
+      enabled: true
+
+    service-data-collector:
+      enabled: false
+
+    digidoc4j:
+      defaultValidationProfile: LT
+      externalOcsp: false
+      configuration:
+        mode: TEST
+        trustedCACerts:
+          - classpath:certs/demo_LV_eID_ICA_2024.cer
+          - classpath:certs/DEMO_eParaksts_ICA_2017.cer
+          - classpath:certs/DEMO_eParaksts_Root_CA.cer
+          - classpath:certs/Test_Root_CA.cer
+          - classpath:certs/Test_Env_Root_CA_OCSP_2020.cer
+          - classpath:certs/Test_Issuing_CA.cer
+          - classpath:certs/Test_ocsp_certificate.cer
+          - classpath:certs/LV_ePM_CA_Cert.cer
+          - classpath:certs/LV_ePM_Cert.cer
+          - classpath:certs/Test_of_SK_ORG2.cer
+          - classpath:certs/Test_of_SK_ROOT.cer
+          - classpath:certs/Test_Zealid_TSA_CA_OCSP.cer
+          - classpath:certs/ZealiD_Test_Env_OCSP_Certificate_Signing.cer
+          - classpath:certs/Zeal_ID_Test_Root_CA_HSM.cer
+          - classpath:certs/Zeal_ID_Test_Issuing_CA.cer
+          - classpath:certs/ZealiD_OCSP_Issuing_2020.cer
+          - classpath:certs/zealid_issuer.cer
+          - classpath:certs/E1.cer
+          - classpath:certs/E2.cer
+
+    logging:
+      pattern:
+        console: '%d{YYYY-MM-dd HH:mm:ss.SSS} [dmss-container-and-signature-services-%thread] [%X{X-Session-ID}/%X{X-Request-ID}] %-5p [%t] %logger{36} - %msg%n'
+      level:
+        root: debug
+
+    trustlynx:
+      useProxyForInternalServices: false
+
+    request:
+      correlation:
+        filter-order: 102
+        filter-order-from: highest_precedence
+        session-header-name: X-Session-Id
+        request-header-name: X-Request-Id
+        client:
+          http:
+            enabled: true
+
+    signatureServices:
+      addContainerToResult: true
+      documentSigningProfiles: classpath:documentsigningprofiles.json
+
+    zealId:
+      apiUri: https://hermes-dev.zealid.com/api/csc/v1/v2.0
+      clientId: clientID
+      clientSecret: clientSecret
+      accountId: accountId
+      redirectUri: https://localhost/extportal/signing/zealid
+
+    validation:
+      defaultValidationProfile: LT
+
+    evrotrust:
+      hostUrl: https://et.test.iteco.bg/vendor/
+      clientVendorNumber: ZR5aRARP32GwY7sq
+      clientApiKey: ba4q23ad-39bb-4c5d-bq7c-9f9f2adf4b93
+      documentName: DigitalMind Signing
+      delay: 3000
+      ignoreValidationError: true
+      keystore:
+        file: classpath:evrotrust/evrotrust.jks
+        password: secret
+
+    asseco:
+      apiUri: https://model.simplysign.webnotarius.pl
+      clientId: clientID
+      clientSecret: secret
+      redirectUri: https://localhost/extportal/signing/simplysign
+
+    timestamp:
+      timestampProviders:
+        - tspSource: http://demo.sk.ee/tsa
+        - tspSource: http://public-qlts.certum.pl/qts-17
+        - tspSource: http://tsa.sk.ee
+
+    pdf:
+      defaultSignatureLevel: PAdES_BASELINE_LT
+      cakeystorepath: dmssrootca.p12
+      cakeystorepassword: password
+      caCertAlias: root ca
+      signature:
+        defaults:
+          numberOfSignaturesInRow: 3
+          dateFormat: "dd.MM.yyyy HH:mm:ss z"
+          xAxis: 10
+          yAxis: 10
+          zoomPrecent: 50
+          signatureText: "Digitally signed by: {g} {sn} \nAt date: {date}"
+          sigMod2XIndent: 200
+          sigMod2YIndent: 300
+          font: classpath:OpenSans-Bold.ttf
+          signerTextVerticalPosition: BOTTOM
+          signatureImageScaling: ZOOM_AND_CENTER
+        textImage:
+          by: "Signed By"
+          in: "In"
+          at: "At"
+      watermark:
+        defaults:
+          xAxis: 100
+          yAxis: 700
+          transparency: 1
+          colour:
+            r: 255
+            g: 0
+            b: 0
+          font: "classpath:Pacifico-Regular.ttf"
+          fontsize: 50
+
+    document-generation-service:
+      baseUrl: http://localhost:8083/api
+      configuration:
+        defaultMimeType: application/pdf
+        defaultExtension: .pdf
+
+    pdfConverter:
+      baseUrl: http://localhost:3002/forms/libreoffice/convert
+      conversionMediaTypes:
+        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        - "application/msword"
+        - "application/vnd.ms-excel"
+        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        - "application/vnd.ms-powerpoint"
+        - "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+
+    remoteSigning:
+      enabled: false
+      remoteSigningServer: http://localhost:8093/api
+
+    offline-mode:
+      enabled: false
+      signatureProfile: B
+      documentTypes:
+        - DMSSDoc
+      methods:
+        - ID_CARD
+        - SMART_ID
+      cert-validation-url: https://www.ee
+      autht-type: basic
+      user-name: usrname
+      password: password
+
+    callbackService:
+      callbackUrl: http://localhost:8090/documentid/{documentid}/status/{status}
+
+    trustlynx-gateway:
+      base-url: http://localhost:8085
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

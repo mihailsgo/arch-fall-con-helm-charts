@@ -1,0 +1,6 @@
+apiVersion: v2
+name: container-signature-service
+description: Helm chart for DMSS Container and Signature Services
+type: application
+version: 0.1.0
+appVersion: "1.0.5"

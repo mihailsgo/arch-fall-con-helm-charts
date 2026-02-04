@@ -1,0 +1,131 @@
+replicaCount: 1
+
+image:
+  repository: dmss-archive-services-fallback
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8095
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: dmss-archive-fallback.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: dmss-archive-fallback-tls
+      hosts:
+        - dmss-archive-fallback.example.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 50m
+    memory: 256Mi
+
+env:
+  JAVA_OPTS: "-Xmx256m -Xms256m"
+  SPRING_CONFIG_LOCATION: "/conf/application/application.yml"
+
+persistence:
+  enabled: true
+  storageClass: standard
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  documentsPath: /mnt/documents
+  tempPath: /mnt/temp
+
+config:
+  applicationYaml: |
+    spring:
+      servlet:
+        multipart:
+          maxFileSize: 1000MB
+          maxRequestSize: 1000MB
+      autoconfigure:
+       exclude:
+          - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+          - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+          - org.springframework.boot.autoconfigure.data.web.SpringDataWebAutoConfiguration
+      jpa:
+        show-sql: true
+        hibernate:
+          format_sql: true
+          ddl-auto: update
+      threads:
+        virtual:
+          enabled: true
+      application:
+        name: dmss-archive-services-fallback
+      sleuth:
+        propagation:
+          type: CUSTOM
+        trace-id128: true
+        supports-join: false
+      zipkin:
+        enabled: false
+
+    server:
+      port: 8095
+    fallback:
+      tempDirectory: 'c:/dmssdocs'
+      documentsDirectory: 'c:/dmssdocs'
+      actAsMainService: true
+      tempDocumentType: 'temp'
+      directoryDepth: 3
+
+    archiveServices:
+      baseUrl: http://localhost:8090/api
+
+    management:
+      health:
+        probes:
+          enabled: true
+      endpoints:
+        web:
+          exposure:
+            include: [ "prometheus" ]
+
+    springdoc:
+      swagger-ui:
+        use-root-path: true
+
+    logging:
+      pattern:
+        console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{X-Session-ID} %X{X-Request-ID} %X{traceId} %X{spanId}] %-5p [%t] %logger{36} - %msg%n'
+      level:
+        root: INFO
+        ee:
+          digitalmind: info
+
+    logRequests: false
+    fileMimeTypesAndExtensions: classpath:mime.types
+
+    service-data-collector:
+      enabled: false
+
+    trustlynx:
+      illegalChars: "[\\/:*?\\\"<>|^&]"
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
